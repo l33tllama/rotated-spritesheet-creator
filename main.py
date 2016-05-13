@@ -1,22 +1,24 @@
 from PIL import Image
 import sys
-
 from PyQt4 import QtGui, QtCore
+
 
 def pil2qpixmap(pil_image):
     w, h = pil_image.size
     data = pil_image.tostring("raw", "BGRX")
     qimage = QtGui.QImage(data, w, h, QtGui.QImage.Format_RGB32)
-    qpixmap = QtGui.QPixmap(w,h)
+    qpixmap = QtGui.QPixmap(w, h)
     pix = QtGui.QPixmap.fromImage(qimage)
     return pix
 
-class Example(QtGui.QWidget):
 
+class Example(QtGui.QWidget):
     def __init__(self):
         super(Example, self).__init__()
 
-        self.initUI()
+        self.loadedFilename = QtCore.QStringList()
+
+        self.init_ui()
 
     def center(self):
         frameGm = self.frameGeometry()
@@ -26,12 +28,10 @@ class Example(QtGui.QWidget):
         self.move(frameGm.topLeft())
 
     def showDialog(self):
-
-        text, ok = QtGui.QInputDialog.getText(self, 'Input Dialog',
-            'Enter your name:')
-
-        if ok:
-            self.le.setText(str(text))
+        self.loadedFilename = QtGui.QFileDialog.getOpenFileName(self, 'Open File', '~', "Image files (*.jpg *.gif)")
+        tmpPixmap = QtGui.QPixmap(self.loadedFilename)
+        tmpPixmap = tmpPixmap.scaledToHeight(100)
+        self.label_loaded_img.setPixmap(tmpPixmap)
 
     def onClick(self):
         print "Hi"
@@ -42,13 +42,22 @@ class Example(QtGui.QWidget):
     def textFieldChanged(self, value):
         self.scale_angle_step.setValue(int(value))
 
-
-    def initUI(self):
-
+    def init_ui(self):
+        # open source file button
         btn_open = QtGui.QPushButton("Select image")
         btn_open.clicked.connect(self.showDialog)
+
+        # file chooser dialog
+        self.dialog_open_img = QtGui.QFileDialog()
+        self.dialog_open_img.setFileMode(QtGui.QFileDialog.AnyFile)
+        #self.dialog_open_img.setFilters("Image files (*.jpg *.gif)")
+
         label_angle_step = QtGui.QLabel("Select angle steps (deg)")
+
+        # angle step slider and textfield
         self.textfield_angle_slider = QtGui.QLineEdit()
+        self.textfield_angle_slider.setText("1")
+        self.textfield_angle_slider.textChanged[str].connect(self.textFieldChanged)
 
         self.scale_angle_step = QtGui.QSlider(QtCore.Qt.Horizontal, self)
         self.scale_angle_step.setFocusPolicy(QtCore.Qt.NoFocus)
@@ -57,12 +66,11 @@ class Example(QtGui.QWidget):
         self.scale_angle_step.setGeometry(30, 40, 100, 30)
         self.scale_angle_step.valueChanged[int].connect(self.sliderChange)
 
-        self.textfield_angle_slider.setText("1")
-        self.textfield_angle_slider.textChanged[str].connect(self.textFieldChanged)
-
+        # loaded image
+        self.label_loaded_img = QtGui.QLabel("Image goes here.")
+        self.label_loaded_img.setFixedHeight(100)
 
         btn_save = QtGui.QPushButton("Save")
-
 
         # left side - select image and angle steps
         vbox_l = QtGui.QVBoxLayout()
@@ -75,6 +83,7 @@ class Example(QtGui.QWidget):
         hbox_l_angle_selector.addStretch(1)
 
         vbox_l.addLayout(hbox_l_angle_selector)
+        vbox_l.addWidget(self.label_loaded_img)
         vbox_l.addStretch(1)
 
         # right side - preview and save
@@ -83,20 +92,19 @@ class Example(QtGui.QWidget):
         vbox_r.addStretch(1)
         vbox_r.addWidget(btn_save)
 
-
         hbox = QtGui.QHBoxLayout()
         hbox.addLayout(vbox_l)
         hbox.addLayout(vbox_r)
 
         self.setLayout(hbox)
 
-        #self.setGeometry(300, 300, 800, 150)
+        # self.setGeometry(300, 300, 800, 150)
         self.setWindowTitle('Buttons')
         self.center()
         self.show()
 
-def main():
 
+def main():
     app = QtGui.QApplication(sys.argv)
     ex = Example()
     sys.exit(app.exec_())
