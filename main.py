@@ -1,6 +1,7 @@
 from PIL import Image
 import sys
 from PyQt4 import QtGui, QtCore
+import math
 
 
 def pil2qpixmap(pil_image):
@@ -12,11 +13,28 @@ def pil2qpixmap(pil_image):
     return pix
 
 
-class Example(QtGui.QWidget):
+class GuiMain(QtGui.QWidget):
     def __init__(self):
-        super(Example, self).__init__()
+        super(GuiMain, self).__init__()
 
-        self.loadedFilename = QtCore.QStringList()
+        self.loadedFilename = ""
+        self.step = 1
+        self.dialog_open_img = QtGui.QFileDialog()
+        self.textfield_angle_slider = QtGui.QLineEdit()
+        self.btn_open = QtGui.QPushButton("Select image")
+        self.scale_angle_step = QtGui.QSlider(QtCore.Qt.Horizontal, self)
+        self.btn_save = QtGui.QPushButton("Save")
+        self.label_angle_step = QtGui.QLabel("Select angle steps (deg)")
+        self.label_num_sprites_l = QtGui.QLabel("Number of sprites: ")
+        self.label_num_sprites_v = QtGui.QLabel("0")
+        self.btn_generate_sheet = QtGui.QPushButton("Generate")
+
+        self.vbox_l = QtGui.QVBoxLayout()
+        self.hbox_l_angle_selector = QtGui.QHBoxLayout()
+        self.vbox_r = QtGui.QVBoxLayout()
+        self.hbox = QtGui.QHBoxLayout()
+        self.img_out = None
+        self.loaded_pixmap = None
 
         self.init_ui()
 
@@ -28,85 +46,126 @@ class Example(QtGui.QWidget):
         self.move(frameGm.topLeft())
 
     def showDialog(self):
-        self.loadedFilename = QtGui.QFileDialog.getOpenFileName(self, 'Open File', '~', "Image files (*.jpg *.gif)")
-        tmpPixmap = QtGui.QPixmap(self.loadedFilename)
-        tmpPixmap = tmpPixmap.scaledToHeight(100)
-        self.label_loaded_img.setPixmap(tmpPixmap)
+        self.loaded_filename = QtGui.QFileDialog.getOpenFileName(self, 'Open File', '~', "Image files (*.jpg *.gif)")
+        print "Loaded: " + self.loadedFilename
+        self.loaded_pixmap = QtGui.QPixmap(self.loaded_filename)
+        self.loaded_pixmap = self.loaded_pixmap.scaledToHeight(100)
+        self.label_loaded_img.setPixmap(self.loaded_pixmap)
+
+    def generate_spritesheet(self):
+
+        if self.loaded_pixmap is None:
+            msg_box = QtGui.QMessageBox()
+            msg_box.setText("Trying to create spritesheet when no image loaded.")
+            msg_box.exec_()
+            return
+
+        # load image into PIL image for manipulation
+        pil_img_loaded = Image.open(self.loadedFilename)
+        x, y = 0, 0
+        width, height = pil_img_loaded.size
+        width_step = math.floor(math.sqrt(self.step))
+
+        height_step = width_step
+        if math.sqrt(self.step) - width_step > 0:
+            height_step = height_step + 1
+
+        out_width, out_height = (width * width_step, height * height_step)
+        self.img_out = Image.new(mode="RGBA", size=(out_width, out_height))
+
+        w_count = 0
+        h_count = 0
+        for i in range(0, 360, self.step):
+            tmpImg = pil_img_loaded.copy()
+            tmpImg.rotate(i)
+
+            x_pos = w_count * width
+            y_pos = h_count * height
+
+            self.img_out.paste(tmpImg, (x_pos, y_pos, width, height))
+
+            w_count += 1
+            h_count += 1
+
+            if w_count > width_step:
+                w_count = 0
 
     def onClick(self):
         print "Hi"
 
     def sliderChange(self, value):
         self.textfield_angle_slider.setText(str(value))
+        self.label_num_sprites_v.setText(str(360 / value))
+        self.step = 360 / value
+        #self.generate_spritesheet(360 / value)
 
     def textFieldChanged(self, value):
         self.scale_angle_step.setValue(int(value))
 
     def init_ui(self):
+
         # open source file button
-        btn_open = QtGui.QPushButton("Select image")
-        btn_open.clicked.connect(self.showDialog)
+        self.btn_open.clicked.connect(self.showDialog)
 
         # file chooser dialog
-        self.dialog_open_img = QtGui.QFileDialog()
         self.dialog_open_img.setFileMode(QtGui.QFileDialog.AnyFile)
-        #self.dialog_open_img.setFilters("Image files (*.jpg *.gif)")
 
-        label_angle_step = QtGui.QLabel("Select angle steps (deg)")
-
-        # angle step slider and textfield
-        self.textfield_angle_slider = QtGui.QLineEdit()
-        self.textfield_angle_slider.setText("1")
-        self.textfield_angle_slider.textChanged[str].connect(self.textFieldChanged)
-
-        self.scale_angle_step = QtGui.QSlider(QtCore.Qt.Horizontal, self)
+        # angle step slider
         self.scale_angle_step.setFocusPolicy(QtCore.Qt.NoFocus)
         self.scale_angle_step.setMinimum(1)
         self.scale_angle_step.setMaximum(90)
-        self.scale_angle_step.setGeometry(30, 40, 100, 30)
+        #self.scale_angle_step.setGeometry(30, 40, 100, 30)
         self.scale_angle_step.valueChanged[int].connect(self.sliderChange)
+
+        # angle step text field
+        self.textfield_angle_slider.setText("1")
+        self.textfield_angle_slider.textChanged[str].connect(self.textFieldChanged)
 
         # loaded image
         self.label_loaded_img = QtGui.QLabel("Image goes here.")
         self.label_loaded_img.setFixedHeight(100)
 
-        btn_save = QtGui.QPushButton("Save")
+        self.btn_generate_sheet.clicked.connect(self.generate_spritesheet)
 
         # left side - select image and angle steps
-        vbox_l = QtGui.QVBoxLayout()
-        vbox_l.addWidget(btn_open)
-        vbox_l.addWidget(label_angle_step)
+        self.vbox_l.addWidget(self.btn_open)
+        self.vbox_l.addWidget(self.label_angle_step)
 
-        hbox_l_angle_selector = QtGui.QHBoxLayout()
-        hbox_l_angle_selector.addWidget(self.scale_angle_step)
-        hbox_l_angle_selector.addWidget(self.textfield_angle_slider)
-        hbox_l_angle_selector.addStretch(1)
+        self.hbox_l_angle_selector.addWidget(self.scale_angle_step)
+        self.hbox_l_angle_selector.addWidget(self.textfield_angle_slider)
+        self.hbox_l_angle_selector.addStretch(1)
 
-        vbox_l.addLayout(hbox_l_angle_selector)
-        vbox_l.addWidget(self.label_loaded_img)
-        vbox_l.addStretch(1)
+        #self.hbox_l_num_sprites = QtGui.QHBoxLayout()
+        #self.hbox_l_num_sprites.addWidget()
+
+        self.vbox_l.addLayout(self.hbox_l_angle_selector)
+
+        self.vbox_l.addWidget(self.label_num_sprites_l)
+        self.vbox_l.addWidget(self.label_num_sprites_v)
+        self.vbox_l.addWidget(self.label_loaded_img)
+        self.vbox_l.addWidget(self.btn_generate_sheet)
+
+
+        self.vbox_l.addStretch(1)
 
         # right side - preview and save
-        vbox_r = QtGui.QVBoxLayout()
+        self.vbox_r.addStretch(1)
+        self.vbox_r.addWidget(self.btn_save)
 
-        vbox_r.addStretch(1)
-        vbox_r.addWidget(btn_save)
+        self.hbox.addLayout(self.vbox_l)
+        self.hbox.addLayout(self.vbox_r)
 
-        hbox = QtGui.QHBoxLayout()
-        hbox.addLayout(vbox_l)
-        hbox.addLayout(vbox_r)
-
-        self.setLayout(hbox)
+        self.setLayout(self.hbox)
 
         # self.setGeometry(300, 300, 800, 150)
-        self.setWindowTitle('Buttons')
+        self.setWindowTitle('Rotated Spritesheet Creator by l33tllama')
         self.center()
         self.show()
 
 
 def main():
     app = QtGui.QApplication(sys.argv)
-    ex = Example()
+    ex = GuiMain()
     sys.exit(app.exec_())
 
 
