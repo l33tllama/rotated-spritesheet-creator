@@ -1,19 +1,10 @@
-from PIL import Image
+from PIL import Image, ImageQt
 import sys
 from PyQt4 import QtGui, QtCore
 import math
 
-
-def pil2qpixmap(pil_image):
-    w, h = pil_image.size
-    data = pil_image.tostring("raw", "BGRX")
-    qimage = QtGui.QImage(data, w, h, QtGui.QImage.Format_RGB32)
-    qpixmap = QtGui.QPixmap(w, h)
-    pix = QtGui.QPixmap.fromImage(qimage)
-    return pix
-
-
 class GuiMain(QtGui.QWidget):
+
     def __init__(self):
         super(GuiMain, self).__init__()
 
@@ -24,11 +15,15 @@ class GuiMain(QtGui.QWidget):
         self.textfield_angle_slider = QtGui.QLineEdit()
         self.btn_open = QtGui.QPushButton("Select image")
         self.scale_angle_step = QtGui.QSlider(QtCore.Qt.Horizontal, self)
-        self.btn_save = QtGui.QPushButton("Save")
+
         self.label_angle_step = QtGui.QLabel("Select angle steps (deg)")
         self.label_num_sprites_l = QtGui.QLabel("Number of sprites: ")
         self.label_num_sprites_v = QtGui.QLabel("0")
+        self.label_loaded_img = QtGui.QLabel("Image goes here.")
         self.btn_generate_sheet = QtGui.QPushButton("Generate")
+
+        self.label_generated_img = QtGui.QLabel("end result goes here")
+        self.btn_save = QtGui.QPushButton("Save")
 
         self.vbox_l = QtGui.QVBoxLayout()
         self.hbox_l_angle_selector = QtGui.QHBoxLayout()
@@ -39,6 +34,11 @@ class GuiMain(QtGui.QWidget):
 
         self.init_ui()
 
+    def pil2qpixmap(self, im):
+        myQtImage = ImageQt.ImageQt(im)
+        pixmap = QtGui.QPixmap.fromImage(myQtImage)
+        return pixmap
+
     def center(self):
         frameGm = self.frameGeometry()
         screen = QtGui.QApplication.desktop().screenNumber(QtGui.QApplication.desktop().cursor().pos())
@@ -47,7 +47,7 @@ class GuiMain(QtGui.QWidget):
         self.move(frameGm.topLeft())
 
     def showDialog(self):
-        self.loaded_filename = QtGui.QFileDialog.getOpenFileName(self, 'Open File', '~', "Image files (*.jpg *.gif)")
+        self.loaded_filename = QtGui.QFileDialog.getOpenFileName(self, 'Open File', '~', "Image files (*.jpg *.gif *.png)")
         print "Loaded: " + self.loaded_filename
         self.loaded_pixmap = QtGui.QPixmap(self.loaded_filename)
         self.loaded_pixmap = self.loaded_pixmap.scaledToHeight(100)
@@ -105,7 +105,17 @@ class GuiMain(QtGui.QWidget):
 
             rot_count += self.angle
 
-        self.img_out.save("/home/leo/Pictures/rot_out.png")
+        #self.loaded_pixmap = QtGui.QPixmap(self.loaded_filename)
+        #self.loaded_pixmap = self.loaded_pixmap.scaledToHeight(100)
+        #self.label_loaded_img.setPixmap(self.loaded_pixmap)
+        print "Converting PIL image to pixmap.."
+        out_pixmap = self.pil2qpixmap(self.img_out)
+        print "Reszing.."
+        #out_pixmap = out_pixmap.scaledToHeight(200)
+        print "Done\n updating label.."
+        self.label_generated_img.setPixmap(out_pixmap)
+
+        #self.img_out.save("/home/leo/Pictures/rot_out.png")
 
     def onClick(self):
         print "Hi"
@@ -119,6 +129,10 @@ class GuiMain(QtGui.QWidget):
 
     def textFieldChanged(self, value):
         self.scale_angle_step.setValue(int(value))
+
+    def saveGenImg(self):
+        save_name = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '~', "Image files (*.jpg *.gif *.png)")
+        self.img_out.save(save_name)
 
     def init_ui(self):
 
@@ -140,9 +154,8 @@ class GuiMain(QtGui.QWidget):
         self.textfield_angle_slider.textChanged[str].connect(self.textFieldChanged)
 
         # loaded image
-        self.label_loaded_img = QtGui.QLabel("Image goes here.")
-        self.label_loaded_img.setFixedHeight(100)
 
+        self.label_loaded_img.setFixedHeight(100)
         self.btn_generate_sheet.clicked.connect(self.generate_spritesheet)
 
         # left side - select image and angle steps
@@ -166,7 +179,9 @@ class GuiMain(QtGui.QWidget):
         self.vbox_l.addStretch(1)
 
         # right side - preview and save
-        self.vbox_r.addStretch(1)
+        #self.vbox_r.addStretch(1)
+        self.btn_save.clicked.connect(self.saveGenImg)
+        self.vbox_r.addWidget(self.label_generated_img)
         self.vbox_r.addWidget(self.btn_save)
 
         self.hbox.addLayout(self.vbox_l)
