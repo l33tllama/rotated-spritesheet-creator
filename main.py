@@ -17,8 +17,9 @@ class GuiMain(QtGui.QWidget):
     def __init__(self):
         super(GuiMain, self).__init__()
 
-        self.loadedFilename = ""
+        self.loaded_filename = ""
         self.step = 1
+        self.angle = 0
         self.dialog_open_img = QtGui.QFileDialog()
         self.textfield_angle_slider = QtGui.QLineEdit()
         self.btn_open = QtGui.QPushButton("Select image")
@@ -47,7 +48,7 @@ class GuiMain(QtGui.QWidget):
 
     def showDialog(self):
         self.loaded_filename = QtGui.QFileDialog.getOpenFileName(self, 'Open File', '~', "Image files (*.jpg *.gif)")
-        print "Loaded: " + self.loadedFilename
+        print "Loaded: " + self.loaded_filename
         self.loaded_pixmap = QtGui.QPixmap(self.loaded_filename)
         self.loaded_pixmap = self.loaded_pixmap.scaledToHeight(100)
         self.label_loaded_img.setPixmap(self.loaded_pixmap)
@@ -61,34 +62,50 @@ class GuiMain(QtGui.QWidget):
             return
 
         # load image into PIL image for manipulation
-        pil_img_loaded = Image.open(self.loadedFilename)
+        pil_img_loaded = Image.open(str(self.loaded_filename))
         x, y = 0, 0
         width, height = pil_img_loaded.size
+        print "width, height: " + str((width, height))
         width_step = math.floor(math.sqrt(self.step))
 
         height_step = width_step
+        print "width step: " + str(width_step)
         if math.sqrt(self.step) - width_step > 0:
+            print "remainder"
             height_step = height_step + 1
+        print "height step: " + str(height_step)
 
-        out_width, out_height = (width * width_step, height * height_step)
-        self.img_out = Image.new(mode="RGBA", size=(out_width, out_height))
+        out_width, out_height = (int(width * width_step), int(height * height_step))
+        print "Mode: " + pil_img_loaded.mode
+        print "Size: " + str((out_width, out_height))
+        self.img_out = Image.new(mode=pil_img_loaded.mode, size=(out_width, out_height))
 
         w_count = 0
         h_count = 0
-        for i in range(0, 360, self.step):
-            tmpImg = pil_img_loaded.copy()
-            tmpImg.rotate(i)
+        rot_count = 0
+        for i in range(0, 360, self.angle):
+            #tmpImg = pil_img_loaded.copy()
+            print "Rotation: " + str(i)
+            rot = pil_img_loaded.rotate(rot_count)
 
             x_pos = w_count * width
             y_pos = h_count * height
 
-            self.img_out.paste(tmpImg, (x_pos, y_pos, width, height))
+            box = (x_pos, y_pos, x_pos + width, y_pos + height)
+            print "This box :" + str(box)
+            #box = (0, 0)
+
+            self.img_out.paste(rot, box)
 
             w_count += 1
-            h_count += 1
 
             if w_count > width_step:
                 w_count = 0
+                h_count += 1
+
+            rot_count += self.angle
+
+        self.img_out.save("/home/leo/Pictures/rot_out.png")
 
     def onClick(self):
         print "Hi"
@@ -97,6 +114,7 @@ class GuiMain(QtGui.QWidget):
         self.textfield_angle_slider.setText(str(value))
         self.label_num_sprites_v.setText(str(360 / value))
         self.step = 360 / value
+        self.angle = value
         #self.generate_spritesheet(360 / value)
 
     def textFieldChanged(self, value):
@@ -145,7 +163,6 @@ class GuiMain(QtGui.QWidget):
         self.vbox_l.addWidget(self.label_loaded_img)
         self.vbox_l.addWidget(self.btn_generate_sheet)
 
-
         self.vbox_l.addStretch(1)
 
         # right side - preview and save
@@ -162,12 +179,10 @@ class GuiMain(QtGui.QWidget):
         self.center()
         self.show()
 
-
 def main():
     app = QtGui.QApplication(sys.argv)
     ex = GuiMain()
     sys.exit(app.exec_())
-
 
 if __name__ == '__main__':
     main()
