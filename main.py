@@ -3,11 +3,17 @@ import sys
 from PyQt4 import QtGui, QtCore
 import math
 
+#TODO: animated preview tab
+#TODO: clean up prints and commented out code
+#TODO: resize preview
+
 class GuiMain(QtGui.QWidget):
 
     def __init__(self):
         super(GuiMain, self).__init__()
 
+        self.txt_ui_base_image = "./ui_base_image.png"
+        self.txt_ui_output_spritesheet = "./ui_output_spritesheet.png"
         self.loaded_filename = ""
         self.step = 1
         self.angle = 0
@@ -27,6 +33,7 @@ class GuiMain(QtGui.QWidget):
 
         self.vbox_l = QtGui.QVBoxLayout()
         self.hbox_l_angle_selector = QtGui.QHBoxLayout()
+        self.hbox_l_num_sprites = QtGui.QHBoxLayout()
         self.vbox_r = QtGui.QVBoxLayout()
         self.hbox = QtGui.QHBoxLayout()
         self.img_out = None
@@ -52,6 +59,7 @@ class GuiMain(QtGui.QWidget):
         self.loaded_pixmap = QtGui.QPixmap(self.loaded_filename)
         self.loaded_pixmap = self.loaded_pixmap.scaledToHeight(100)
         self.label_loaded_img.setPixmap(self.loaded_pixmap)
+        self.btn_generate_sheet.setEnabled(True)
 
     def generate_spritesheet(self):
 
@@ -136,51 +144,65 @@ class GuiMain(QtGui.QWidget):
 
     def init_ui(self):
 
-        # open source file button
+        # --- LEFT SIDE ------
+        # open, set angle rotation degrees and generate button
+
+        # OPEN source file button
         self.btn_open.clicked.connect(self.showDialog)
 
-        # file chooser dialog
+        # FILE CHOOSER dialog
         self.dialog_open_img.setFileMode(QtGui.QFileDialog.AnyFile)
 
-        # angle step slider
+        # ANGLE STEP slider
         self.scale_angle_step.setFocusPolicy(QtCore.Qt.NoFocus)
         self.scale_angle_step.setMinimum(1)
         self.scale_angle_step.setMaximum(90)
         #self.scale_angle_step.setGeometry(30, 40, 100, 30)
         self.scale_angle_step.valueChanged[int].connect(self.sliderChange)
 
-        # angle step text field
+        # ANGLE STEP text field
         self.textfield_angle_slider.setText("1")
         self.textfield_angle_slider.textChanged[str].connect(self.textFieldChanged)
 
-        # loaded image
-
-        self.label_loaded_img.setFixedHeight(100)
+        # LOADED IMAGE and GENERATE BUTTON
+        self.loaded_pixmap = QtGui.QPixmap(self.txt_ui_base_image)
+        self.label_loaded_img.setPixmap(self.loaded_pixmap)
+        #self.label_loaded_img.setFixedHeight(180)
+        self.btn_generate_sheet.setEnabled(False)
         self.btn_generate_sheet.clicked.connect(self.generate_spritesheet)
 
+        # LAYOUT PACKING
         # left side - select image and angle steps
         self.vbox_l.addWidget(self.btn_open)
         self.vbox_l.addWidget(self.label_angle_step)
 
+        # ANGLE SELECTOR HBOX
         self.hbox_l_angle_selector.addWidget(self.scale_angle_step)
-        self.hbox_l_angle_selector.addWidget(self.textfield_angle_slider)
         self.hbox_l_angle_selector.addStretch(1)
-
-        #self.hbox_l_num_sprites = QtGui.QHBoxLayout()
-        #self.hbox_l_num_sprites.addWidget()
+        self.textfield_angle_slider.setFixedWidth(48)
+        self.hbox_l_angle_selector.addWidget(self.textfield_angle_slider)
 
         self.vbox_l.addLayout(self.hbox_l_angle_selector)
 
-        self.vbox_l.addWidget(self.label_num_sprites_l)
-        self.vbox_l.addWidget(self.label_num_sprites_v)
+        # NUMBER OF SPRITES HBOX
+
+        self.hbox_l_num_sprites.addWidget(self.label_num_sprites_l)
+        self.hbox_l_num_sprites.addStretch(1)
+        self.hbox_l_num_sprites.addWidget(self.label_num_sprites_v)
+
+        self.vbox_l.addLayout(self.hbox_l_num_sprites)
         self.vbox_l.addWidget(self.label_loaded_img)
         self.vbox_l.addWidget(self.btn_generate_sheet)
 
         self.vbox_l.addStretch(1)
 
-        # right side - preview and save
-        #self.vbox_r.addStretch(1)
+        # --- RIGHT SIDE ----
+        # preview and save
+        self.loaded_pixmap = QtGui.QPixmap(self.txt_ui_output_spritesheet)
+        self.label_generated_img.setPixmap(self.loaded_pixmap)
+
         self.btn_save.clicked.connect(self.saveGenImg)
+        self.vbox_r.addStretch(1)
         self.vbox_r.addWidget(self.label_generated_img)
         self.vbox_r.addWidget(self.btn_save)
 
