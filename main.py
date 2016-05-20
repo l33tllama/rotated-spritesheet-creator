@@ -15,6 +15,9 @@ class GuiMain(QtGui.QWidget):
         self.txt_ui_base_image = "./ui_base_image.png"
         self.txt_ui_output_spritesheet = "./ui_output_spritesheet.png"
         self.loaded_filename = ""
+        self.angle_divisors = [1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90]
+        self.angle_divisors_i = 0
+        self.last_slider_value = 0
         self.step = 1
         self.angle = 0
         self.dialog_open_img = QtGui.QFileDialog()
@@ -56,8 +59,10 @@ class GuiMain(QtGui.QWidget):
     def showDialog(self):
         self.loaded_filename = QtGui.QFileDialog.getOpenFileName(self, 'Open File', '~', "Image files (*.jpg *.gif *.png)")
         print "Loaded: " + self.loaded_filename
+        if self.loaded_filename == "":
+            return
         self.loaded_pixmap = QtGui.QPixmap(self.loaded_filename)
-        self.loaded_pixmap = self.loaded_pixmap.scaledToHeight(100)
+        self.loaded_pixmap = self.loaded_pixmap.scaledToHeight(180)
         self.label_loaded_img.setPixmap(self.loaded_pixmap)
         self.btn_generate_sheet.setEnabled(True)
 
@@ -74,13 +79,21 @@ class GuiMain(QtGui.QWidget):
         x, y = 0, 0
         width, height = pil_img_loaded.size
         print "width, height: " + str((width, height))
-        width_step = math.floor(math.sqrt(self.step))
+        width_step = math.ceil(math.sqrt(self.step))
 
         height_step = width_step
+
+        # if height can be 1 less then width (eg 12 = 4x3)
+        if (height_step - 1) * width_step == self.step:
+            height_step -=1
+
+        if (height_step - 2) * width_step == self.step:
+            height_step -= 1
+
         print "width step: " + str(width_step)
-        if math.sqrt(self.step) - width_step > 0:
-            print "remainder"
-            height_step = height_step + 1
+        #if math.sqrt(self.step) - width_step > 0:
+            #print "remainder"
+            #height_step = height_step + 1
         print "height step: " + str(height_step)
 
         out_width, out_height = (int(width * width_step), int(height * height_step))
@@ -90,34 +103,40 @@ class GuiMain(QtGui.QWidget):
 
         w_count = 0
         h_count = 0
-        rot_count = 0
-        for i in range(0, 360, self.angle):
+        step_count = 0
+        for rotation in range(0, 360, self.angle):
             #tmpImg = pil_img_loaded.copy()
-            print "Rotation: " + str(i)
-            rot = pil_img_loaded.rotate(rot_count)
-
+            print "Rotation: " + str(rotation)
             x_pos = w_count * width
             y_pos = h_count * height
+            rot = pil_img_loaded.rotate(-rotation)
 
             box = (x_pos, y_pos, x_pos + width, y_pos + height)
-            print "This box :" + str(box)
-            #box = (0, 0)
+            print "This box :" + str((w_count, h_count))
 
             self.img_out.paste(rot, box)
 
             w_count += 1
 
-            if w_count > width_step:
+            step_count += 1
+
+            if step_count > self.step:
+                break
+
+            if w_count > width_step - 1:
                 w_count = 0
                 h_count += 1
-
-            rot_count += self.angle
 
         #self.loaded_pixmap = QtGui.QPixmap(self.loaded_filename)
         #self.loaded_pixmap = self.loaded_pixmap.scaledToHeight(100)
         #self.label_loaded_img.setPixmap(self.loaded_pixmap)
         print "Converting PIL image to pixmap.."
-        out_pixmap = self.pil2qpixmap(self.img_out)
+        tmp_rotate_img = Image.new(mode=pil_img_loaded.mode, size=(out_width, out_height))
+        print "pasting.."
+        tmp_rotate_img.paste(self.img_out)
+        print "resizing.."
+        tmp_rotate_img = tmp_rotate_img.resize((180, 180))
+        out_pixmap = self.pil2qpixmap(tmp_rotate_img)
         print "Reszing.."
         #out_pixmap = out_pixmap.scaledToHeight(200)
         print "Done\n updating label.."
@@ -129,11 +148,29 @@ class GuiMain(QtGui.QWidget):
         print "Hi"
 
     def sliderChange(self, value):
+        if value > 90: return
+        if value < self.last_slider_value:
+            i = 0
+            for angle in self.angle_divisors:
+                if angle > value:
+                    self.scale_angle_step.setValue(self.angle_divisors[i - 1])
+                    value = self.angle_divisors[i - 1]
+                    break
+                i += 1
+        elif value > self.last_slider_value:
+            i = 0
+            for angle in sorted(self.angle_divisors):
+                if angle >= value:
+                    self.scale_angle_step.setValue(self.angle_divisors[i])
+                    value = self.angle_divisors[i]
+                    break
+                i += 1
+
         self.textfield_angle_slider.setText(str(value))
         self.label_num_sprites_v.setText(str(360 / value))
         self.step = 360 / value
         self.angle = value
-        #self.generate_spritesheet(360 / value)
+        self.last_slider_value = value
 
     def textFieldChanged(self, value):
         self.scale_angle_step.setValue(int(value))
@@ -157,11 +194,11 @@ class GuiMain(QtGui.QWidget):
         self.scale_angle_step.setFocusPolicy(QtCore.Qt.NoFocus)
         self.scale_angle_step.setMinimum(1)
         self.scale_angle_step.setMaximum(90)
-        #self.scale_angle_step.setGeometry(30, 40, 100, 30)
         self.scale_angle_step.valueChanged[int].connect(self.sliderChange)
 
         # ANGLE STEP text field
         self.textfield_angle_slider.setText("1")
+
         self.textfield_angle_slider.textChanged[str].connect(self.textFieldChanged)
 
         # LOADED IMAGE and GENERATE BUTTON
