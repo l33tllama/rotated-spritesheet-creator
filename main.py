@@ -145,8 +145,13 @@ class GuiMain(QtGui.QWidget):
         self.scale_angle_step.setValue(int(value))
 
     def saveGenImg(self):
-        save_name = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '~', "Image files (*.jpg *.gif *.png)")
-        self.img_out.save(save_name)
+        save_name = QtGui.QFileDialog.getSaveFileName(self, 'Save File', self.loaded_filename, "Image files (*.jpg *.gif *.png)")
+        print "Saving file as : " + save_name
+        file_ext = save_name[-3:]
+        if file_ext == "png":
+            self.img_out.save(str(save_name), "PNG")
+        else:
+            self.img_out.save(str(save_name))
 
     def init_ui(self):
 
