@@ -3,9 +3,8 @@ import sys
 from PyQt4 import QtGui, QtCore
 import math
 
-#TODO: animated preview tab
+#TODO: animated preview tab (maybe later..)
 #TODO: clean up prints and commented out code
-#TODO: resize preview
 
 class GuiMain(QtGui.QWidget):
 
@@ -76,9 +75,7 @@ class GuiMain(QtGui.QWidget):
 
         # load image into PIL image for manipulation
         pil_img_loaded = Image.open(str(self.loaded_filename))
-        x, y = 0, 0
         width, height = pil_img_loaded.size
-        print "width, height: " + str((width, height))
         width_step = math.ceil(math.sqrt(self.step))
 
         height_step = width_step
@@ -90,34 +87,20 @@ class GuiMain(QtGui.QWidget):
         if (height_step - 2) * width_step == self.step:
             height_step -= 1
 
-        print "width step: " + str(width_step)
-        #if math.sqrt(self.step) - width_step > 0:
-            #print "remainder"
-            #height_step = height_step + 1
-        print "height step: " + str(height_step)
-
         out_width, out_height = (int(width * width_step), int(height * height_step))
-        print "Mode: " + pil_img_loaded.mode
-        print "Size: " + str((out_width, out_height))
         self.img_out = Image.new(mode=pil_img_loaded.mode, size=(out_width, out_height))
 
         w_count = 0
         h_count = 0
         step_count = 0
         for rotation in range(0, 360, self.angle):
-            #tmpImg = pil_img_loaded.copy()
-            print "Rotation: " + str(rotation)
             x_pos = w_count * width
             y_pos = h_count * height
             rot = pil_img_loaded.rotate(-rotation)
-
             box = (x_pos, y_pos, x_pos + width, y_pos + height)
-            print "This box :" + str((w_count, h_count))
-
             self.img_out.paste(rot, box)
 
             w_count += 1
-
             step_count += 1
 
             if step_count > self.step:
@@ -127,25 +110,11 @@ class GuiMain(QtGui.QWidget):
                 w_count = 0
                 h_count += 1
 
-        #self.loaded_pixmap = QtGui.QPixmap(self.loaded_filename)
-        #self.loaded_pixmap = self.loaded_pixmap.scaledToHeight(100)
-        #self.label_loaded_img.setPixmap(self.loaded_pixmap)
-        print "Converting PIL image to pixmap.."
         tmp_rotate_img = Image.new(mode=pil_img_loaded.mode, size=(out_width, out_height))
-        print "pasting.."
         tmp_rotate_img.paste(self.img_out)
-        print "resizing.."
         tmp_rotate_img = tmp_rotate_img.resize((180, 180))
         out_pixmap = self.pil2qpixmap(tmp_rotate_img)
-        print "Reszing.."
-        #out_pixmap = out_pixmap.scaledToHeight(200)
-        print "Done\n updating label.."
         self.label_generated_img.setPixmap(out_pixmap)
-
-        #self.img_out.save("/home/leo/Pictures/rot_out.png")
-
-    def onClick(self):
-        print "Hi"
 
     def sliderChange(self, value):
         if value > 90: return
@@ -215,7 +184,7 @@ class GuiMain(QtGui.QWidget):
 
         # ANGLE SELECTOR HBOX
         self.hbox_l_angle_selector.addWidget(self.scale_angle_step)
-        self.hbox_l_angle_selector.addStretch(1)
+        #self.hbox_l_angle_selector.addStretch(1)
         self.textfield_angle_slider.setFixedWidth(48)
         self.hbox_l_angle_selector.addWidget(self.textfield_angle_slider)
 
@@ -251,6 +220,7 @@ class GuiMain(QtGui.QWidget):
         # self.setGeometry(300, 300, 800, 150)
         self.setWindowTitle('Rotated Spritesheet Creator by l33tllama')
         self.center()
+        self.setFixedWidth(420)
         self.show()
 
 def main():
